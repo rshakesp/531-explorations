@@ -1,34 +1,31 @@
 ---
-title: |
- | Exploration 1---Statistical Inference  
- | The problem of 'controlling for' for
- | Causal inference and Description
-author: Jake Bowers
+title: "| Exploration 1---Statistical Inference  \n| The problem of 'controlling for'
+  for\n| Causal inference and Description\n"
+author: "Jake Bowers"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
-bibliography: classbib.bib
-fontsize: 10pt
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+    keep_tex: yes
+  html_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
 geometry: margin=1in
-mainfont: "Crimson Text"
 graphics: yes
 header-includes:
-  - \usepackage[T1]{fontenc}
-  - \usepackage{textcomp}
-  - \usepackage{fontspec}
-  - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
-  - \newfontfamily\themainfont[Ligatures=TeX]{Crimson Text}
-  - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
-  - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
-output:
-  html_document:
-      fig_caption: yes
-      fig_height: 4
-      fig_width: 4
-  pdf_document:
-      fig_caption: yes
-      fig_height: 4
-      fig_width: 4
-      latex_engine: xelatex
-      keep_tex: true
+- \usepackage[T1]{fontenc}
+- \usepackage{textcomp}
+- \usepackage{fontspec}
+- \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+- \newfontfamily\themainfont[Ligatures=TeX]{Crimson Text}
+- \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+- \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+mainfont: Crimson Text
+fontsize: 10pt
+bibliography: classbib.bib
 ---
 
 
@@ -96,6 +93,8 @@ couple of analysts to look into this --- to make my comparisons more fair and
 I'm wondering if you'd take a look at what they did before they fled...mean,
 left and went to bed."
 
+**Thoughts: Unfair comparisons --> adjustments**
+
 \begingroup
 \unicodefont
 Memo: To UN CVE Director,
@@ -129,6 +128,19 @@ covariatesLabels <- c( "GOR" = "Government Office Region",
 covariates <- names(covariatesLabels)
 ```
 
+```{r}
+boxplot(hlphrs~postbomb,data = wrkdat)
+require(ggplot2)
+ggplot(data = wrkdat, aes(x=postbomb, y=hlphrs)) + 
+geom_boxplot(aes(fill=GOR))
+p + facet_wrap( ~ hlphrs)
+(http://stackoverflow.com/questions/14604439/plot-multiple-boxplot-in-one-graph)
+
+
+```
+
+**They threw out people with age 0, clearly invalid. Are there other categories that have weird or wrong data in them? Should we toss them or do something else with them? Do we need compliance standards for keeping data?**
+
 This summary of the effect of the bombings has a couple of problems: First, we
 wondered about whether summarizing differences using a simple mean might be
 misleading --- we might not use the mean as a one-number summary in the first
@@ -143,12 +155,17 @@ like a natural experiment allowing a clear counterfactual
 comparison.\footnote{We also recommend @gerber2012field Chap 1 and 2 for more on
   counterfactual comparisons if the issue is not clear from Rosenbaum or
   Gelman and Hill.}
+  
+** Maybe put in a box plot**
+**address with readings -- 1.2.1 well-defined treatment, well-defined time, clear distinction between covariates -- 1.2.2 treatment seems haphazard, not obviously related to the treatment adn control outcomes -- 1.2.3 treated and control groups comparable: table demonstrating that matching was effective in balancing ovserved covariates. No way to anticipate that unmeasured covariates are similartly balanced -- 1.2.4 eliminate plausible alternatives: use other data collected to see if groups affected by different biases. Also, collect that data.-- 1.2.5 exclusion criteria: inclusion or exclusion based on variables prior to treatment assignment. So probably wouldn't jsut toss out "no age?" -- 1.2.6 leaving a group - noncompliance? -- 1.2.7 study protocol - do not know. what was this survey even for? **
 
 These plots suggest do not make us worry too much about the common
 support/extrapolation problem with respect to two covariates (assuming that
 residential tenure and household income are truly covariates and not
 post-intervention variables). However, these plots do raise questions about
 the parallel lines requirement.
+
+**Thoughts: common support/extrapolation problem?  parallel lines requirement? **
 
 ```{r }
 effect2lm<-lm(hlphrs~postbomb+SLive,data=wrkdat)
@@ -260,6 +277,7 @@ interviewed after the bombing that different from people interviewed before
 the bombing? This next approach was developed by @hansen2008cbs.
 
 ```{r results='hide'}
+#install.packages("RItools")
 library(RItools)
 
 balfmla<-reformulate(covariates[1:15],response="postbomb")
@@ -305,6 +323,7 @@ bombing or to covariates that we do not observe). We have not yet been paid by
 your organization so we leave the interpretation of the following to you.
 
 ```{r }
+#install.packages("optmatch")
 library(optmatch)
 
 newdata<-fill.NAs(balfmla,data=wrkdat) ## We want to match on missingness too
