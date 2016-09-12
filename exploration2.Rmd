@@ -1,35 +1,31 @@
 ---
 title: 'Exploration 2: Bias and Unbiasedness'
-author:
-- Gustavo Diaz
-- Luzmarina Garcia
-- Justin Pierce
-- Rebecca Shakespeare
-date: "September 12, 2016"
-output:
-  html_document:
-    fig_caption: yes
-    fig_height: 4
-    fig_width: 4
-  pdf_document:
-    fig_caption: yes
-    fig_height: 4
-    fig_width: 4
-    keep_tex: yes
-    latex_engine: xelatex
+author: 'Jake Bowers'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+bibliography: classbib.bib
+fontsize: 10pt
 geometry: margin=1in
+mainfont: "Crimson Text"
 graphics: yes
 header-includes:
-- \usepackage[T1]{fontenc}
-- \usepackage{textcomp}
-- \usepackage{fontspec}
-- \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
-- \newfontfamily\themainfont[Ligatures=TeX]{Crimson Text}
-- \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
-- \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
-mainfont: Crimson Text
-fontsize: 10pt
-bibliography: classbib.bib
+  - \usepackage[T1]{fontenc}
+  - \usepackage{textcomp}
+  - \usepackage{fontspec}
+  - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+  - \newfontfamily\themainfont[Ligatures=TeX]{Crimson Text}
+  - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+  - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+output:
+    html_document:
+      fig_caption: yes
+      fig_height: 4
+      fig_width: 4
+    pdf_document:
+      fig_caption: yes
+      fig_height: 4
+      fig_width: 4
+      latex_engine: xelatex
+      keep_tex: true
 ---
 
 
@@ -46,7 +42,7 @@ bibliography: classbib.bib
 ## To make the pdf file do
 ## render("exploration2.Rmd",output_format=pdf_document())
 
-library(knitr)
+require(knitr)
 opts_chunk$set( tidy=FALSE, echo=TRUE,results='markup',strip.white=TRUE,fig.path='figs/fig',cache=FALSE,highlight=TRUE,width.cutoff=100,size='tiny',message=FALSE,comment=NA)
 ```
 
@@ -78,8 +74,9 @@ those sets differ greatly from the overall difference that you estimated
 conditional on matched set last time. Here is some code that she provided that
 a previous analyst used to explore your matched design.
 
-```{r inspectmatches, results='hide', fig.width=6,fig.height=3}
-load(url("http://jakebowers.org/Data/ho05.rda")) #Fixed data path
+```{r inspectmatches, results='hide'}
+load("~/Documents/PROJECTS/ProfSite/ICPSR/ho05.rda")
+## load(url("http://jakebowers.org/ICPSR/ho05.rda"))
 
 covariatesLabels <- c("GOR" = "Government Office Region",
 		      "Rsex" = "Gender",
@@ -102,135 +99,62 @@ covariatesLabels <- c("GOR" = "Government Office Region",
 		      "SLive5cat" = "5 level cateogrical variable for years lived in neighborhood")
 
 covariates <- names(covariatesLabels)
-#We already went over the functions above last time. We don't do it again.
 
 wrkdat<-ho05[!is.na(ho05$hlphrs)&ho05$Rage!=0,] ## removing bad obs
 library(optmatch)
 library(RItools)
-load('fm1.rda') ## At the end of the last session I did save(fm1,file='fm1.rda')
-#Recall from the previous exploration fm1 was the fullmatch based on the mahalanobis distance.
-#According to Wikipedia, this is a measure of how many standard deviations away is point p from 
-#the mean (what mean? the treatment group mean? the propensity score mean? Is Mahalanobis 
-#Distance completely independent (i.e. alternative) from the propensity score or related?)
-#We also include a caliper based on the propensity score distance matrix
-#fm1<-fullmatch(mhDistMat+caliper(psDistMat,1),data=newdata) #No need to do it again.
-
-#Introducing a caliper of 1 sd of the propensity score, so there will not be matches with more than 1 sd.
-#How do we determine a good caliper? It may depend on the data. Different calipers could be plugged in to see what creates decent matches according to our idea of what "comparable" units may be. Is this in line with the idea that adjustment needs to have clearly defined standards?
-#Once again we are left wondering if Mahalanobis Distance and a Propensity Score are two different standards or if they related? Is it good to use both? Chapter 8 in Rosenbaum (2010) says the MH distance is used to ensure good balance in the propensity score. Mahalanobis distance takes into account the correlations among variables. Rosenbaum discusses this as a method to correct for observations with similar propensity scores while having different covariate values. However, we are a little unclear about this comment. Shouldn't a propensity score correct or care less about balance of individual covariates, instead prefering a balance of all covariates which influence the propensity of treatment? 
-
+load('fm1.rda') ## at the end of the last session I did save(fm1,file='fm1.rda')
 all.equal(names(fm1),row.names(wrkdat))
-#This line is checking to make sure that the observations in fm1 are the same that are in wrkdat. The result "true" means that they are the same
-length(fm1)
-nrow(wrkdat)
-
-with(wrkdat,table(fm1,postbomb,useNA="ifany")) #Table of how many observations are in each value of the MH distance. For each MH distance, it suggests how many observations from both the control and treatment groups have that value, and thus, how many matched groups can be made. 
-
-table(matched(fm1)) #974 observation matched, 22 not matched
-## Is it ok to remove people who aren't matched? Don't we want to include everyone in our final analysis? 
-##Who was not matched? How do they compare to those included in the matched design? 
-notmatchedfolks<-subset(wrkdat,subset=unmatched(fm1),select=c("postbomb","hlphrs","Rsex","Rage","ZQuals1")) #subset #Creating a subset made of those who were not matched (JP)
-summary(subset(wrkdat,subset=matched(fm1),select=c("postbomb","hlphrs","Rsex","Rage","ZQuals1"))) #matched
-summary(notmatchedfolks) #not matched
-#Comparing those who were and were not matched we note some differences: 1) more of the people in the matched sample were treated, so its likely that most of #the not matched were from the control group; 2) mean of hlphrs between matched and not matched about the same, and both ranges are from 0 to 100+ hours; 3) The ratio of women to men in the matched group is much larger than in the unmatched group; 4) The not matched group were younger on average. It must be noted, however, that the not matched group has only 22 observations.
-#So we should expect differences to appear mostly because we do not have enough observations to make the two groups comparable. 
-#One would think, in principle, that not matched units are more likely to be unusual with respect to the distribution in the sense they do not have a counterpart. Because this is full matching (allowing for many-to-many sets), we should suspect this is the case (GD: Any idea how to double check it?). The differences are explained below. 
-#In theory, we'd prefer to include everyone. If this were a randomized experiment, we would not want to remove any collected data from our data set, since it would introduce imbalance. Since this is an observation study, we're removing them to improve the balance.
-#matchedfolks<- subset(wrkdat,subset=matched(fm1),select=c("postbomb","hlphrs","Rsex","Rage","ZQuals1"))
-#plot(matchedfolks$hlphrs,matchedfolks$Rage, col="red")
-#points(notmatchedfolks$rsex,notmatchedfolks$Rage, cex=1, col="black")
-#plot above compares visually on age v. hlphrs one unmatched obvious outlier in this plot. The rest of the not matched folks don't fall far from the scatter, or obviously show a part of the plot that only has coverage with matchedfolks or notmatchedfolks.
-wrkdat$notmatched<-as.numeric(unmatched(fm1)) #Labeling people who were not matched
-
-tmpfmla<-reformulate(covariates[1:15],response="notmatched") #sets notmatched as dependent variable, everything else as independent
+with(wrkdat,table(fm1,postbomb,useNA="ifany"))
+table(matched(fm1))
+## Who was not matched? How do they compare to those included in the matched design?
+notmatchedfolks<-subset(wrkdat,subset=unmatched(fm1),select=c("postbomb","hlphrs","Rsex","Rage","ZQuals1"))
+summary(subset(wrkdat,subset=matched(fm1),select=c("postbomb","hlphrs","Rsex","Rage","ZQuals1")))
+summary(notmatchedfolks)
+wrkdat$notmatched<-as.numeric(unmatched(fm1))
+tmpfmla<-reformulate(covariates[1:15],response="notmatched")
 compareMatched2UnMatched<-xBalance(tmpfmla,data=wrkdat,
 	      report=c("std.diffs","z.scores","adj.means",
-                    "adj.mean.diffs", "chisquare.test","p.values")) #function doing balance test and reporting desired test statistics
-compareMatched2UnMatched #We are now evaluating the balance of groups matched vs. non-matched. the p-value of the
-#chi-sq allows us to reject the null of independence in the distribution, suggesting both groups are not balanced across covariates. You can also see a lot of variables in plot(compareMatched2UnMatched). This only plots when compiling or if you increase your R studio plot area a lot.
-
+                    "adj.mean.diffs", "chisquare.test","p.values"))
+compareMatched2UnMatched
 ## What sets have the largest differences in number of immigrants
-immdiffs<-sapply(split(wrkdat,fm1),function(dat){ mean(dat$immigrant) }) #returns array grouped by MH distance, Groups observations by MH distance and then calculates the perentage of the people who are immigrants at each MH distance. For each MH distance, calculates the percentage of observations which have that distance who have immigrants =1
-table(immdiffs) #Reorganizes immdiffs in terms of how many observations, in terms of MH distances, have a particular percentage of immigrants. 
-diverseImmigrantSets<-names(immdiffs[immdiffs==.5]) #This is collecting the MH distance sets where half of the respondents are immigrants. 
-table(diverseImmigrantSets)
+immdiffs<-sapply(split(wrkdat,fm1),function(dat){ mean(dat$immigrant) })
+table(immdiffs)
+diverseImmigrantSets<-names(immdiffs[immdiffs==.5])
+
 ## Effect conditional on the matched design overall
-# Why did we quit caring about the diverseImmigrantsets? It seems like we cared for a minute and then didn't conclude anything. 
-lmOverall<-lm(hlphrs~postbomb+fm1,data=wrkdat) #Linear regression estimating the impact of matched sets. We already did this in the last exploration.
-coef(lmOverall)[["postbomb"]] #and this is a lower coefficcient than we had without + fm1. 
-#We can say this is less biased (although we do not have the underlying population to compare), but the substantive results does not change.
-summary(lmOverall)$coefficients[2,] #include Std error and p-value.
-
-
+lmOverall<-lm(hlphrs~postbomb+fm1,data=wrkdat)
+coef(lmOverall)[["postbomb"]]
 ## Set by set differences of means
-setEffects<-sapply(split(wrkdat,fm1),function(dat){ coef(lm(hlphrs~postbomb,data=dat))[["postbomb"]] }) 
-#Returns the mean of the ols coefficients for immigration for each propensity score.
-sort(zapsmall(setEffects)) #zapsmall makes numbers close to 0 into 0, and it can be tailored to how many digits to adjust to. 
-#Both sorting the results from the line above and removing all of them which are close to 0
-## Set by set effects for the sets with the most immigrant diversity (i.e. half of the people were immigrants)
-zapsmall(setEffects[diverseImmigrantSets]) #doing the same thing, just with the diverseImmigrantSets (ones where the difference is .5)
-summary(setEffects[diverseImmigrantSets]) #The range is large and it still only has 18 items in it. 
-lmdiverse<-lm(hlphrs~postbomb,data=wrkdat[fm1 %in% diverseImmigrantSets,]) #Estimating the effect only for those units that exist in diversImmigrantSets
-coef(lmdiverse)#How the immigrant sets compare to the original coefficient that considers matched sets
-summary(lmdiverse)
-#The effect is larger for diverse immigrants. Still not significant. So we cannot say diverse immigrants experienced the bombing in a different way than the rest of the sample.
-
+setEffects<-sapply(split(wrkdat,fm1),function(dat){ coef(lm(hlphrs~postbomb,data=dat))[["postbomb"]] })
+sort(zapsmall(setEffects))
+## Set by set effects for the sets with the most immigrant diversity (i.e. where half of the people were immigrants)
+zapsmall(setEffects[diverseImmigrantSets])
+summary(setEffects[diverseImmigrantSets])
+lm(hlphrs~postbomb,data=wrkdat[fm1 %in% diverseImmigrantSets,])
 ```
 
-```{r activemuslims}
-#Removed  results='hide' and echo=FALSE because this is the comparison we care about.
+```{r activemuslims, results='hide', echo=FALSE}
 table(wrkdat$relig.and.act)
 table(wrkdat$relig.and.act=="Muslim.Active")
-activemuslims<-sapply(split(wrkdat,fm1),function(dat){ mean(dat$relig.and.act=="Muslim.Active") }) # 78 active muslims; doing the same array of mean of propensity score just based on the proportion (mean) of active muslims
-table(activemuslims) #How many active muslims are in each propensity score? The highest score was 1, and it has 7 respondents in it.
-mostActiveMuslimDiffs<-names(activemuslims[activemuslims==.5]) #Sets where proportion of Muslims is .5. 
-mostActiveMuslims<-names(activemuslims[activemuslims==max(activemuslims)]) #This makes an array of the highest mean propensity score members.
-leastActiveMuslims<-names(activemuslims[activemuslims==min(activemuslims)]) #Same idea - this should be the 158 who have 0 .
-#Remember setEffects estimates coefficients for the group specified.
+activemuslims<-sapply(split(wrkdat,fm1),function(dat){ mean(dat$relig.and.act=="Muslim.Active") })
+table(activemuslims)
+mostActiveMuslimDiffs<-names(activemuslims[activemuslims==.5])
+mostActiveMuslims<-names(activemuslims[activemuslims==max(activemuslims)])
+leastActiveMuslims<-names(activemuslims[activemuslims==min(activemuslims)])
+
 zapsmall(setEffects[mostActiveMuslimDiffs])
 zapsmall(setEffects[mostActiveMuslims])
 zapsmall(setEffects[leastActiveMuslims])
-#Getting rid of the values close to 0
+
 summary(setEffects[mostActiveMuslimDiffs])
 summary(setEffects[mostActiveMuslims])
 summary(setEffects[leastActiveMuslims])
-coef(lmOverall)[["postbomb"]] #How the Muslim sets compare to the original coefficient that considers matched sets. 
 
-#We can also look at plots
-plot(density(setEffects[mostActiveMuslims]),lty=2,main="")
-lines(density(setEffects[mostActiveMuslimDiffs]))
-lines(density(setEffects[leastActiveMuslims]),lty=3)
-abline(v=coef(lmOverall)[["postbomb"]], col="red")
-#To make it more intuitive, we may want to look at the OLS coefficients. Note that some groups have very few observations.
-lmdiff<-lm(hlphrs~postbomb,data=wrkdat[fm1 %in% mostActiveMuslimDiffs,])
-lmmam<-lm(hlphrs~postbomb,data=wrkdat[fm1 %in% mostActiveMuslims,])
-lmlam<-lm(hlphrs~postbomb,data=wrkdat[fm1 %in% leastActiveMuslims,])
-lenall<- length(fm1)
-lenAMD <- length(mostActiveMuslimDiffs)
-lenMAM <- length(mostActiveMuslims)
-lenLAM <- length(leastActiveMuslims)
-n <- c(lenall,lenAMD,lenMAM,lenLAM)
-diffstats<-summary(lmdiff)$coefficients[2,]
-mamstats<-summary(lmmam)$coefficients[2,]
-lamstats<-summary(lmlam)$coefficients[2,]
-overallstats<-summary(lmOverall)$coefficients[2,]
-tab.muslims<-rbind(overallstats,diffstats,mamstats,lamstats)
-tab.muslims2 <- cbind(tab.muslims, n)
-row.names(tab.muslims2)<-c("All sets","A Most active Muslims difference","B Most active Muslims", "C Least active Muslims")
-tab.muslims2 #Muslims with n
+coef(lmOverall)[["postbomb"]]
+
+
 ```
-
-**Our friend wants to know whether Muslims' help hours were particularly affected by the bombing, and wants us to compare (using our matched sets) the difference in help hours for the following sets within the whole set:**
-**1. Sets with the least differences for religiously active Muslims (which we are interpreting as sets with exactly half religiously active Muslims)**
-**2. Sets with the highest percentage of religiously active Muslims**
-**3. Sets with the highest number of religiously active Muslims**
-
-**Findings**
-**Group A: -.1818 help hours after bombing. However, the p-value indicates that this is not significant. However, the error is very high and the set size is only 11, so it's hard to gain knowledge from this figure.**
-**Group B: -.9341 help hours after the bombing. However, the p-value indiciates no significance, and the group size is very small, so once again, it is hard to gain knowledge from this**
-**Group C: +1.33 help hours after bombing. The p-value indicates that this isnt' significant, but at least the n is larger.**
-
-**So overall, it appears that Muslims were as unmeasurably affected as everyone else.**
 
 "Now," she says after seeing your work, "I can be more honest with you. We
 have signal intelligence suggesting that the timing of the bombing was actually
@@ -247,18 +171,14 @@ poor connection. I meant to say, the 'pensioner before she retired to
 the Cape'. Can you look at the code and figure it out? I'm particularly
 concerned about mentions of bias."
 
-```{r tidy=FALSE}
-wrkdat$hlp01<-as.numeric(wrkdat$hlphrs>0) #adding a column of hlp01 - binary indicator of whether respondent had more than 0 hlphrs
+```{r tidy=FALSE, results='hide'}
+wrkdat$hlp01<-as.numeric(wrkdat$hlphrs>0)
 ## check recode:
-with(wrkdat,table(hlp01,hlphrs)) #Shows that hlp01 is 0 when hlphrs is 0 and 1 the rest of the time.
-logitmod<-glm(hlp01~postbomb,data=wrkdat,family=binomial(link="logit")) #fitting hlp01 (binomial) regressed on postbomb using a logit model.
-#This can be interpreted as a difference in the probability of people.
-coef(logitmod)[["postbomb"]] ## This is biased according to David Freedman (2008) and it doesn't estimate what was requested.
-summary(logitmod)
-olsmod<-lm(hlp01~postbomb,data=wrkdat) #This is just OLS regression of hlp01 (0,1) on postbomb (also 0,1).
+## with(wrkdat,table(hlp01,hlphrs))
+logitmod<-glm(hlp01~postbomb,data=wrkdat,family=binomial(link="logit"))
+coef(logitmod)[["postbomb"]] ## This is biased according to David Freedman 2008 and it doesn't estimate what was requested.
+olsmod<-lm(hlp01~postbomb,data=wrkdat)
 coef(olsmod)[["postbomb"]] ## This estimates the requested quantity and it is unbiased!
-summary(olsmod)
-#This is not biased (in a Freedman sense) because is a comparison of means, or the proportion of people changing behavior in each group.
 ```
 
 "This little bit of code raised a lot of questions for me. For example, at
@@ -271,26 +191,11 @@ numbers with respect to the question about the proportion of people who may
 have changed their behavior due to the bombing? And, if the logit model is not
 telling us about that quantity, what is it telling us?"
 
-**According to @freedman2008randomization, logit coefficients are biased because they assume a different functional form of the data than one that comes from a randomized experiment. According to the Neyman (potential outcomes) model of causal inference, randomization between treatment and control conditions implies that the values of the outcome variables are deterministic, conditional on the covariates (because of randomization, no covariate has an influence in treatment assignment). Meanwhile, the logit model views the outcomes as random distributed, with a specific distribution across covariates.**
-
-**Freedman shows logit is systematically biased (he mainly discusses inconsistency because bias can only be assessed by simulating population parameters) when the sample size is not large enough when compared to the differential log odds of success (which he shows is unbiased and more consistent).**
-
-**In this particular case, using OLS should not be problematic (at least not more than using logit) because it is only the comparison of proportions of people with a positive number of hlphrs before and after the bombings. In comparison, a logit model estimates probabilities, which was not what the question that was asked. We follow the naive assumption that similar units are comparable and we believe our matching process guaranteed that observations are comparable.  We can then say that the difference in proportions, in the treatment and control group, are an indication of the change in behavior before and after the bombings:**
-
-```{r proportions}
-coef(olsmod)[1] #proportion of people involved with the community before the bombings
-sum(coef(olsmod)) #Proportion of people involved with the community after the bombings
-#However, this is not a significant difference, so we cannot be sure behavior changed
-summary(olsmod)$coefficients[2,] #We cannot say increase in proportion is different from zero
-```
-
 "Second, I'm very worried about the word 'bias'. Can you explain in your own
 words what it means for an estimator to be biased or unbiased? The analyst gave
 me a list of a few sources that talk about bias that might be useful
 (@gerber2012field Chap 3, @james2013introduction Chap 3, @lohr:2001 Chap 2,
 @berk04)."
-
-**Estimators are the statistics we have been using so far to calculate the effect of pre/post-bombings. An unbiased estimator gets the population parameter (in this case, the average treatment effect) right most of the time (after multiple realizations of the experiment, or across multiple hypothetical surveys from the same population (@gerber2012field, @james2013introduction)). Conversely, a biased estimator will systematically underestimate or overestimate the true population parameter, so most of the time we would be getting the wrong number.**
 
 "Third, can you show me evidence about whether these procedures are biased or
 not? The analyst left some code that I didn't understand. Can you fix it and
@@ -298,92 +203,82 @@ explain it? It looks like it might have been used for some other purpose and
 doesn't refer to any logit models. I also don't understand what simulation
 error means. Please help!"
 
-**We rarely know the true population parameter, so the only way to test if an estimator is unbiased is by defining a true population parameter:**
 
-
-```{r biassketch, cache=TRUE}
-#Chunk options removed that hide results because we want to see results.
-set.seed(20150313) #Seeds are for replicability of "random" things.
-## Bias refers to a relationship between the repeated operation of a procedure and a truth. So we have to define a truth.
-numhlpers<-round(nrow(wrkdat)*.55) 
-table(wrkdat$hlp01[wrkdat$postbomb==0]) # numhlpers is .55 of the items in wrkdat. So what they're trying to do is to randomly assign .55 of the group to treatment.
-wrkdat$fakey0<-sample(rep(c(0,1),c(nrow(wrkdat)-numhlpers,numhlpers))) 
-#?sample # takes a sample of size x with or without replacement
-#?rep # repeats the thing for everything
+```{r biassketch, results='hide', eval=FALSE, echo=TRUE, cache=TRUE}
+set.seed(20150313)
+## Bias refers to a relationship between the repeated operation of a procedure and a truth. So we have to invent a truth.
+numhlpers<-round(nrow(wrkdat)*.55) ## table(wrkdat$hlp01[wrkdat$postbomb==0])
+wrkdat$fakey0<-sample(rep(c(0,1),c(nrow(wrkdat)-numhlpers,numhlpers)))
 trueATE<-.25 ## posit a true average treatment effect
-wrkdat$fakey1<-wrkdat$fakey0+trueATE #adds .25 to each items, so fakey 1 is .25 and 1.25
+wrkdat$fakey1<-wrkdat$fakey0+trueATE
 
-wrkdat$obsy<-with(wrkdat, postbomb*fakey1+(1-postbomb)*fakey0 ) ## What we observe.
+wrkdat$obsy<-with(wrkdat, postbomb*fakey1+(1-postbomb)*fakey0 ) ## what we observe
 
-## Calculate the true ATE and the $\hat{\bar{\tau}}$
-trueATEfake<-with(wrkdat,mean(fakey1)-mean(fakey0)) # This should just be .25 because it's opposite of previous .25 addition.
+## calculate the true ATE and the $\hat{\bar{\tau}}$
+trueATEfake<-with(wrkdat,mean(fakey1)-mean(fakey0))
 trueTotal<-with(wrkdat,sum(fakey1))
 trueDiffLogOdds<-
-## Estimate the true ATE using the data that we would observe in this fake experiment.
+## estimate the true ATE using the data that we would observe in this fake experiment
 estATEfake<-coef(lm(obsy~postbomb,wrkdat))["postbomb"]
 estTotal<-with(wrkdat,mean(obsy[postbomb==1])*length(obsy))
-# Define a function which reveals a difference in observed outcome and calculates.
-## Estimates of the ATE given a different treatment vector.
+
+# define a function which reveals a difference in observed outcome and calculates
+## estimates of the ATE given a different treatment vector
 makeNewObsyAndEst<-function(thez){
     newobsy<-with(wrkdat, thez*fakey1+(1-thez)*fakey0 )
-    lmATE<-coef(lm(newobsy~thez))[["thez"]] #thez is our new distribution of treatment variable.
-    totalEffect<-mean(newobsy[thez==1])*length(newobsy) #Mean of observations assigned to treatment times the length of newobsy.
-    ## gammaglm<-glm(newobsy~thez,family=Gamma) ## Change this old stuff to logit.
+    lmATE<-coef(lm(newobsy~thez))[["thez"]]
+    totalEffect<-mean(newobsy[thez==1])*length(newobsy)
+    ## gammaglm<-glm(newobsy~thez,family=Gamma) ## Change this old stuff to logit for the Boss
     ## haty0<-predict(gammaglm,newdata=data.frame(thez=0),type="response")
     ## haty1<-predict(gammaglm,newdata=data.frame(thez=1),type="response")
     ## gammaglmATE<-haty1-haty0
     ## gammacoef<-coef(gammaglm)[["thez"]]
     ## return(c(lmATE=lmATE,gammacoef=gammacoef,gammaglmATE=gammaglmATE))
-    return(c(lmATE=lmATE,totalTE=totalEffect)) #Report average.
+    return(c(lmATE=lmATE,totalTE=totalEffect))
 }
 
 ## Does the pair of functions do what we want them to do?
-makeNewObsyAndEst(sample(wrkdat$postbomb)) #Make new observations and estimate
+makeNewObsyAndEst(sample(wrkdat$postbomb))
 
 nsims<-10000
-## For many of the possible ways to run the experiment, calculate this mean difference.
+## For many of the possible ways to run the experiment, calculate this mean difference
 ### The slow way:
-dist.sample.est<-replicate(nsims,makeNewObsyAndEst(sample(wrkdat$postbomb)))
+## dist.sample.est<-replicate(nsims,make.new.R.and.est(sample(wrkdat$postbomb)))
 
 ### The fast way uses all of the cores on your unix-based machine (mac or linux):
-#require(parallel)
-#ncores<-detectCores()
-#system.time(
-#dist.sample.est<-simplify2array(
-#                                mclapply(1:nsims,function(i){
-#                                         makeNewObsyAndEst(sample(wrkdat$postbomb))
-#                                 },mc.cores=ncores)
-#                                )
-#)
+require(parallel)
+ncores<-detectCores()
+system.time(
+dist.sample.est<-simplify2array(
+                                mclapply(1:nsims,function(i){
+                                         makeNewObsyAndEst(sample(wrkdat$postbomb))
+                                 },mc.cores=ncores)
+                                )
+)
 
 str(dist.sample.est)
 apply(dist.sample.est,1,summary)
 
 ## And recall that we have simulation error on the order of 1/sqrt(nsims)
-SEsims<-apply(dist.sample.est,1,function(x){ sqrt(var(x)/nsims) }) 
-#We don't know how to take this into account, but it seems to be really small, when plotted in the graphs below it overlaps the density.
+SEsims<-apply(dist.sample.est,1,function(x){ sqrt(var(x)/nsims) })
 
-
-#comparison of ATEs
-plot(density(dist.sample.est[1,]))#plot all the 10000 ATEs
-abline(v=trueATE,col="red")
-
-#Comparison of Total
-plot(density(dist.sample.est[2,]))#plot all the 10k TotalTE
-abline(v=trueTotal,col="red")
-
-#OLS seems fairly unbiased
 ```
 
-Interpreting a logit coefficient, in general, depends on the values of the explanatory variables. Here, we have only one explanatory variable, and it has only two values. In this case, we can interpret $\exp(\hat{\beta})$ as the odds ratio: the bombing made helping `r exp(coef(logitmod))[['postbomb']]` times more likely, those interviewed after the bombing were `r exp(coef(logitmod))[['postbomb']]` times more likely to report some helping behavior than those interviewed before the bombing. We tend to write something like:
+Interpreting a logit coefficient, in general, depends on the values of the explanatory variables. Here, we have only one explanatory variable, and it has only two values. In this case, we can interpret $\exp(\hat{\beta})$ as the odds ratio: the bombing made helping  `r exp(coef(logitmod))[['postbomb']]` times more likely, those interviewed after the bombing were  `r exp(coef(logitmod))[['postbomb']]` times more likely to report some helping behavior than those interviewed before the bombing. We tend to write something like:
 
-$$ logit(y=1) = logit(p) = \log(p/(1-p))= \beta_0 + \beta_1x_1 + ... + \beta_kx_k $$
+$$ logit(y=1) = logit(p) = \log(p/(1-p))= \beta_0 + \beta_1*x_1 + ... + \beta_k*x_k $$
 
-$$ p= exp(\beta_0 + \beta_1x_1 + ... + \beta_kx_k)/(1+exp(\beta_0 + \beta_1x_1 + ... + \beta_kx_k))$$
+$$ p= exp(\beta_0 + \beta_1*x_1 + ... + \beta_k*x_k)/(1+exp(\beta_0 + \beta_1*x_1 + ... + \beta_k*x_k))$$
 
-Freedman notes that some researchers want to know the average response to treatment (using his potential outcomes notation): $\alpha^T = (1/n) \sum_{i=1}^n Y_i^T$ or the average response to control $\alpha^C = (1/n) \sum_{i=1}^n Y_i^C$, neither of which is fully observed. We show below that one can also define and estimate an average treatment effect: $\alpha^T - \alpha^C$.
 
-Others are interested in the difference in the logs odd of success:
+Freedman notes that some researches want to know the average response to
+treatment (using his potential outcomes notation): $\alpha^T = (1/n)
+\sum_{i=1}^n Y_i^T$ or the average response to control $\alpha^C = (1/n)
+\sum_{i=1}^n Y_i^C$, neither of which is full observed. We show below that one
+can also define and estimate an average treatment effect: $\alpha^T -
+\alpha^C$.
+
+Others are interested in the difference in the loggs odd of success:
 
 $$ \Delta=\log \frac{\alpha^T}{1-\alpha^T} - \log \frac{\alpha^C}{1-\alpha^C} $$
 
@@ -395,15 +290,14 @@ Some people seem to think that the coefficient from a logit model estimates $\De
 
 with(wrkdat,table(hlp01,postbomb))
 
-(363*121)/(433*79) #manual odds ratio
+(363*121)/(433*79)
 
 exp(coef(logitmod)["postbomb"])
 
-preddat<-expand.grid(postbomb=c(0,1)) #create a dataframe from all combinations of factor variables
+preddat<-expand.grid(postbomb=c(0,1))
 preddat$yhat<-predict(logitmod,newdata=preddat,type="response")
 preddat$xbhat<-predict(logitmod,newdata=preddat,type="link")
-#Values of outcome and treatment variable according to logtitmod
-## Using the probability scale.
+## Using the probability scale
 preddat$yhat[preddat$postbomb==1]-preddat$yhat[preddat$postbomb==0]
 ## Compare:
 coef(olsmod)[['postbomb']]
@@ -411,11 +305,10 @@ preddat$xbhat[preddat$postbomb==1]-preddat$xbhat[preddat$postbomb==0]
 coef(logitmod)[['postbomb']]
 exp(preddat$xbhat[preddat$postbomb==1]-preddat$xbhat[preddat$postbomb==0])
 ## odds(x)=prob(x)/(1-prob(x)) and
-#Comparing values based on ols and logitmod
+
 ```
 
 ```{r biaswithlogit, echo=TRUE, cache=TRUE}
-#Can we go over this in class?
 set.seed(20150313)
 ## Bias refers to a relationship between the repeated operation of a procedure and a truth. So we have to invent a truth.
 ## numhlpers<-round(nrow(wrkdat)*.55) ## table(wrkdat$hlp01[wrkdat$postbomb==0])
@@ -435,7 +328,6 @@ wrkdat$obsy<-with(wrkdat, postbomb*fakey1+(1-postbomb)*fakey0 ) ## what we obser
 trueATEfake<-with(wrkdat,mean(fakey1)-mean(fakey0))
 trueTotal<-with(wrkdat,sum(fakey1))
 trueDelta<-with(wrkdat, log( mean(fakey1)/(1-mean(fakey1))) - log( mean(fakey0)/(1-mean(fakey0))))
-#true delta is true log odds of success
 ## true Logit?
 ## estimate the true ATE using the data that we would observe in this fake experiment
 estATEfake<-coef(lm(obsy~postbomb,wrkdat))["postbomb"] ## same as a mean difference on obsy
@@ -444,11 +336,10 @@ estDelta1<-coef(glm(obsy~postbomb,wrkdat,family=binomial(link="logit")))[["postb
 estDelta2<-with(wrkdat, log( mean(obsy[postbomb==1])/(1-mean(obsy[postbomb==1]))) -
 		 log( mean(obsy[postbomb==0])/(1-mean(obsy[postbomb==0])))
 	      )
-## Notice that estDelta1 and estDelta2 are the same (because they are both based in "true" data).
+## Notice that estDelta1 and estDelta2 are the same.
 
-# Define a function which reveals a difference in observed outcome and calculates.
-## Estimates of the ATE given a different treatment vector.
-#Same function, now estimating delta and logit.
+# define a function which reveals a difference in observed outcome and calculates
+## estimates of the ATE given a different treatment vector
 makeNewObsyAndEst<-function(thez){
     newobsy<-with(wrkdat, thez*fakey1+(1-thez)*fakey0 )
     lmATE<-coef(lm(newobsy~thez))[["thez"]]
@@ -466,22 +357,22 @@ makeNewObsyAndEst<-function(thez){
 makeNewObsyAndEst(sample(wrkdat$postbomb))
 
 nsims<-10000
-##For many of the possible ways to run the experiment, calculate this mean difference
-#The slow way:
-dist.sample.est<-replicate(nsims,makeNewObsyAndEst(sample(wrkdat$postbomb))) #replicate 10 thousand times
+## For many of the possible ways to run the experiment, calculate this mean difference
+### The slow way:
+## dist.sample.est<-replicate(nsims,makeNewObsyAndEst(sample(wrkdat$postbomb)))
 
-### The fast way uses all of the cores on your unix-based machine (mac or linux): [Only half of us has unix-base machines so we opt for the slow way]
-#require(parallel)
-#ncores<-detectCores()
-#system.time(
-#dist.sample.est<-simplify2array(
-#                                mclapply(1:nsims,function(i){
-                                         #makeNewObsyAndEst(sample(wrkdat$postbomb))
-#                                 },mc.cores=ncores)
-#                                )
-#)
+### The fast way uses all of the cores on your unix-based machine (mac or linux):
+require(parallel)
+ncores<-detectCores()
+system.time(
+dist.sample.est<-simplify2array(
+                                mclapply(1:nsims,function(i){
+                                         makeNewObsyAndEst(sample(wrkdat$postbomb))
+                                 },mc.cores=ncores)
+                                )
+)
 
-str(dist.sample.est) #str gives you the structure of the object
+str(dist.sample.est)
 apply(dist.sample.est,1,summary)
 
 ## Compare to
@@ -489,57 +380,12 @@ trueATEfake
 trueTotal
 trueDelta
 
-#ATE
-plot(density(dist.sample.est[4,]))
-abline(v=trueATEfake,col="red")
-
-#Total
-plot(density(dist.sample.est[2,]))
-abline(v=trueTotal,col="red")
-
-#Delta
-plot(density(dist.sample.est[5,]))
-abline(v=trueDelta,col="red")
-abline(v=exp(coef(logitmod))[["postbomb"]],col="blue")
-#We see delta is unbiased while logit is biased
-
-
-
-
 ## And recall that we have simulation error on the order of 1/sqrt(nsims)
-SEsims<-apply(dist.sample.est,1,function(x){ sqrt(var(x)/nsims) }) #We are not sure how to include this
+SEsims<-apply(dist.sample.est,1,function(x){ sqrt(var(x)/nsims) })
+
 ```
 
 Recall that Freedman says that the $\Delta$ estimator is *consistent* but not unbiased. What would we need to do to show that it is consistent but that the logit coefficient is not consistent? Also, recall that Freedman's version included a covariate. Would this matter here?
-
-**In this case, we can only assess bias because we decided to give a particular value to our population parameter. We normally do not know this, but we can compare the consistency of different estimations by simulating multiple hypothetical samples and comparing their distribution. This involves a function that creates new samples, estimates results and stores coefficients. A more consistent estimator should have a narrower distribution of coefficients.**
-
-```{r functions}
-#This is a test to see what happens if we create new hypothetical samples
-permuteld<-function(db){
-  shuffhlp<-sample(db$hlp01)
-  shuffbomb<-sample(db$postbomb)
-  l<-coef(glm(shuffhlp~shuffbomb,family=binomial(link="logit")))[["shuffbomb"]]
-  d<-with(db, log( mean(shuffhlp[shuffbomb==1])/(1-mean(shuffhlp[shuffbomb==1]))) -
-		 log( mean(shuffhlp[shuffbomb==0])/(1-mean(shuffhlp[shuffbomb==0])))
-	      )
-  return(c(l,d))
-}
-permuteld(db=wrkdat) #This will always be the same. Seems unfair to estimate them in separate functions because then they will always be different.
-#Are we calculating delta in the right way? Are logit coef and delta only different when we include covariates in logit? Then what is the point to compare?
-#If we did this right, then we are demonstrating that without covariates delta and logit coef are the same. Therefore including covariates matters.
-#If we did it wrong. Then we are not calculating delta in the right way and we need help.
-```
-
-
-**The use of a covariate in @freedman2008randomization is a little bit confusing. It may be enough to say that logit assumes a particular functional form of the data to show that it is biased. Because his departing point is data from a randomized experiments, the use of covariates should not be necessary unless there are unexpected imbalances between control and treatment (which should only have to do with accidents in randomization). That said, we normally include covariates in observational data to introduce the necessary adjustments to ensure we are comparing like with like (we already addressed how this can be problematic in the previous exploration). So in principle using a covariate should be irrelevant for experimental data.**
-
-**Since this is an observational study and we did not take the precautions of matching to ensure comparability, we cannot simply ignore covariates in the estimation of logit as it depends on the distribution of covariates. That is not the case with the estimation of $\Delta$, because it only considers the distribution of the outcome and treatment variables, without making assumptions about the covariates. Logit may eventually produce a coefficient for the treatment variable that compares to $\Delta$ with the appropriate adjustment. Therefore with observational data, logit should be even more biased than $\Delta$ (which is not to say that delta is free of bias because it does not change the fact that it ignores the data generating process).** ^[This should be addressed in class also. We are not completely sure of how the inclusion of covariates in observational data logit relates to delta.]
-
-**One could argue that delta and logit coefficients are always the same here because there is no inclusion of covariates in logit. If that is the case, would it be fair to compare one estimator that considers covariates against one that does not?**
-
-
-
 
 
 
